@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>المساعد الصوتي للمناطق المحمية</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 60px;
+            background: #f5f7fa;
+        }
+        h1 { color: #2c3e50; }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #startBtn { background-color: #27ae60; color: white; }
+        #stopBtn { background-color: #c0392b; color: white; }
+        #status { margin-top: 20px; font-size: 18px; }
+        #result {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<h1>🎤 المساعد الصوتي للمناطق المحمية</h1>
+
+<button id="startBtn">ابدأ التسجيل</button>
+<button id="stopBtn" disabled>إيقاف</button>
+
+<div id="status">اضغطي "ابدأ التسجيل" وتحدثي بالسؤال</div>
+
+<div id="result" style="display:none;">
+    <h3>📝 النص المستخرج:</h3>
+    <p id="questionText"></p>
+
+    <h3>🤖 جواب النظام:</h3>
+    <p id="answerText"></p>
+
+    <h3>🔊 الصوت:</h3>
+    <audio id="audioPlayer" controls></audio>
+</div>
+
+<script>
+let mediaRecorder;
+let audioChunks = [];
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const statusDiv = document.getElementById("status");
+
+startBtn.onclick = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+    };
+
+    mediaRecorder.start();
+    statusDiv.innerText = "🎙️ جاري التسجيل... تكلّمي الآن";
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+};
+
+stopBtn.onclick = async () => {
+    mediaRecorder.stop();
+    statusDiv.innerText = "⏳ جاري إرسال الصوت ومعالجته...";
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+
+    mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recorded.wav");
+
+        const response = await fetch("http://127.0.0.1:8000/ask", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        document.getElementById("result").style.display = "block";
+        document.getElementById("questionText").innerText = data.question_text;
+        document.getElementById("answerText").innerText = data.answer_text;
+
+        // تشغيل الصوت الناتج من السيرفر
+        const audioPlayer = document.getElementById("audioPlayer");
+        audioPlayer.src = data.audio_file + "?t=" + new Date().getTime(); // لمنع الكاش
+        audioPlayer.load();
+
+        statusDiv.innerText = "✅ تم! يمكنك تسجيل سؤال آخر";
+    };
+};
+</script>
+
+</body>
+</html>

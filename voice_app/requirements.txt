@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+faster-whisper
+sentence-transformers
+faiss-cpu
+pypdf
+soundfile
+pyttsx3
+ollama
+
