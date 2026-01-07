@@ -1,25 +1,18 @@
-# 1️⃣ Base image
-FROM python:3.11-slim
+# Use Python as the base image
+FROM python:3.12.4
 
-# 2️⃣ Set working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# 3️⃣ Prevent python from writing pyc files
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Copy the application files into the container
+COPY . /app
 
-# 4️⃣ Install system dependencies (خفيفة)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install required dependencies
+RUN pip install --no-cache-dir fastapi uvicorn docker python-multipart  python-jose[cryptography] passlib bcrypt SQLAlchemy sqlmodel
 
-# 5️⃣ Copy requirements and install
-COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+# Expose the FastAPI port
+EXPOSE 8000
 
-# 6️⃣ Copy project files
-COPY . .
+# Command to run the FastAPI app
+CMD ["uvicorn", "main:app","--host", "0.0.0.0", "--port", "8000","--reload"]
 
-# 7️⃣ Default command
-CMD ["python", "app/main.py"]
