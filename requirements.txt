@@ -11,3 +11,5 @@ bcrypt
 passlib
 anyio
 httpx
+faiss-cpu
+numpy
