@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import shutil
 import os
-
+from sqlalchemy import text
 from ai.stt import speech_to_text
 from rag.rag_engine import retrieve_context
 from ai.llm import llama_answer
@@ -11,7 +11,7 @@ from ai.tts import text_to_speech
 
 app = FastAPI()
 
-# مسارات الملفات
+#path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TMP_DIR = os.path.join(BASE_DIR, "temp")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -37,7 +37,7 @@ async def ask(file: UploadFile = File(...)):
     with open(TMP_INPUT, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # 2) تحويل الصوت إلى نص
+    # 2) STT
     question = speech_to_text(TMP_INPUT)
 
     # 3) RAG
@@ -46,7 +46,7 @@ async def ask(file: UploadFile = File(...)):
     # 4) LLM
     answer = llama_answer(question, contexts)
 
-    # 5) تحويل الجواب إلى صوت
+    # 5) TTS
     text_to_speech(answer, TMP_OUTPUT)
 
     # 6) إرجاع رابط ملف الصوت
@@ -54,3 +54,4 @@ async def ask(file: UploadFile = File(...)):
         "answer_text": answer,
         "audio_url": "/static/audio/answer.mp3"
     }
+

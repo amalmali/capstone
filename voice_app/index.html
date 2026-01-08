@@ -2,10 +2,20 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>🎤 مساعد صوتي مباشر</title>
+    <title>🌍 Geospatial Assistance System</title>
 </head>
 <body>
-    <h2>🎤 مساعد صوتي مباشر</h2>
+
+    <h2>🌍 Geospatial Assistance System</h2>
+    <p>مساعد صوتي ذكي + فحص مكاني (داخل / خارج نطاق)</p>
+
+    <hr>
+
+    <!-- =========================
+         🎤 القسم الصوتي
+    ========================== -->
+
+    <h3>🎤 المساعد الصوتي</h3>
 
     <button id="startBtn">ابدأ التسجيل</button>
     <button id="stopBtn" disabled>إيقاف التسجيل</button>
@@ -15,7 +25,31 @@
 
     <audio id="audioPlayer" controls></audio>
 
+    <hr>
+
+    <!-- =========================
+         📍 القسم الجغرافي (تصميم فقط حالياً)
+    ========================== -->
+
+    <h3>📍 الفحص الجغرافي (Geospatial Check)</h3>
+
+    <label>Latitude:</label>
+    <input type="text" id="latInput" placeholder="مثال: 21.4858"><br><br>
+
+    <label>Longitude:</label>
+    <input type="text" id="lonInput" placeholder="مثال: 39.1925"><br><br>
+
+    <button id="checkLocationBtn">تحقق من الموقع</button>
+
+    <p id="geoResult">---</p>
+
+    <hr>
+
     <script>
+        // =========================
+        // 🎤 الجزء الصوتي (كما كان شغال)
+        // =========================
+
         let mediaRecorder;
         let audioChunks = [];
 
@@ -38,15 +72,16 @@
                 const formData = new FormData();
                 formData.append("file", audioBlob, "recording.wav");
 
+                // إرسال الصوت إلى FastAPI
                 const response = await fetch("/ask", {
                     method: "POST",
                     body: formData
                 });
 
-                const data = await response.json();
-
-                answerText.innerText = data.answer_text;
-                audioPlayer.src = data.audio_url;
+                // استلام الصوت الناتج وتشغيله مباشرة
+                const audioData = await response.blob();
+                const audioURL = URL.createObjectURL(audioData);
+                audioPlayer.src = audioURL;
                 audioPlayer.play();
             };
 
@@ -60,8 +95,34 @@
             startBtn.disabled = false;
             stopBtn.disabled = true;
         };
+
+        // =========================
+        // 📍 الجزء الجغرافي (تصميم فقط حالياً)
+        // =========================
+
+        const checkBtn = document.getElementById("checkLocationBtn");
+        const latInput = document.getElementById("latInput");
+        const lonInput = document.getElementById("lonInput");
+        const geoResult = document.getElementById("geoResult");
+
+        checkBtn.onclick = () => {
+            const lat = latInput.value;
+            const lon = lonInput.value;
+
+            if (!lat || !lon) {
+                geoResult.innerText = "❌ الرجاء إدخال خط العرض والطول.";
+                return;
+            }
+
+            // حالياً مجرد عرض تجريبي (سنربطه بقاعدة البيانات لاحقاً)
+            geoResult.innerText = `📍 تم استلام الإحداثيات:
+Latitude = ${lat}
+Longitude = ${lon}
+
+(سيتم لاحقاً التحقق إذا كانت النقطة داخل البوليجون أو لا)`;
+        };
     </script>
+
 </body>
 </html>
-
 

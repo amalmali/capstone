@@ -7,24 +7,20 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# ============================================================
-# المسارات
-# ============================================================
 
+#path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # rag/
 PROJECT_DIR = os.path.dirname(BASE_DIR)                # voice_app/
 DATA_DIR = os.path.join(PROJECT_DIR, "data")           # voice_app/data
 INDEX_DIR = os.path.join(DATA_DIR, "faiss_index")      # voice_app/data/faiss_index
 
-# مسار ملف الـ PDF
 PDF_PATH = os.path.join(DATA_DIR, "مشروع اللائحة التنفيذية للمناطق المحمية.pdf")
 
-# نموذج الـ Embeddings
+#Embeddings
 EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
-# ============================================================
-# تنظيف النص
-# ============================================================
+
+# cleaning text
 
 def clean_text(text: str) -> str:
     if not text:
@@ -49,18 +45,17 @@ def clean_text(text: str) -> str:
 
     return text.strip()
 
-# ============================================================
+
 # FAISS
-# ============================================================
 
 _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 _vector_store = None
 
 def _build_index():
-    print("📚 Building FAISS index from PDF...")
+    print("Building FAISS index from PDF...")
 
     if not os.path.exists(PDF_PATH):
-        raise FileNotFoundError(f"❌ PDF file not found: {PDF_PATH}")
+        raise FileNotFoundError(f" PDF file not found: {PDF_PATH}")
 
     loader = PyPDFLoader(PDF_PATH)
     documents = loader.load()
@@ -79,7 +74,7 @@ def _build_index():
     os.makedirs(INDEX_DIR, exist_ok=True)
     vector_store.save_local(INDEX_DIR)
 
-    print("✅ FAISS index built and saved.")
+    print("FAISS index built and saved.")
     return vector_store
 
 
@@ -92,10 +87,10 @@ def _load_index():
     index_file = os.path.join(INDEX_DIR, "index.faiss")
 
     if not os.path.exists(INDEX_DIR) or not os.path.exists(index_file):
-        print("📚 FAISS index not found. Rebuilding...")
+        print("FAISS index not found. Rebuilding...")
         _vector_store = _build_index()
     else:
-        print("📦 Loading existing FAISS index...")
+        print(" Loading existing FAISS index...")
         _vector_store = FAISS.load_local(
             INDEX_DIR,
             _embeddings,
@@ -104,9 +99,9 @@ def _load_index():
 
     return _vector_store
 
-# ============================================================
+
+
 # RAG
-# ============================================================
 
 def retrieve_context(query: str, k: int = 5) -> List[str]:
     if not query or not query.strip():
