@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المساعد القانوني الذكي | المناطق المحمية</title>
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            background: var(--primary-bg);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 1.8rem; color: var(--accent-blue); }
+        .header p { color: var(--text-dim); margin-top: 5px; }
+        
+        /* شريط اختيار الطريقة */
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-dim);
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+        }
+
+        /* حاوية التفاعل */
+        .interaction-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        /* نمط الصوت */
+        #voice-section { display: flex; flex-direction: column; align-items: center; }
+        .circle-btn {
+            width: 140px; height: 140px; border-radius: 50%;
+            border: none; background: var(--accent-blue); color: white;
+            cursor: pointer; transition: all 0.3s ease;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 10px; user-select: none;
+        }
+        .circle-btn.listening { background: var(--accent-red) !important; box-shadow: 0 0 30px rgba(239,68,68,0.5); transform: scale(1.1); }
+        .circle-btn.thinking { background: var(--accent-purple) !important; animation: breathe 2s infinite; }
+
+        /* نمط الكتابة */
+        #text-section { 
+            display: none; 
+            width: 100%; max-width: 600px;
+            background: var(--card-bg);
+            padding: 15px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .input-group { display: flex; gap: 10px; }
+        #text-input {
+            flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #334155;
+            background: #0f172a; color: white; font-size: 1rem; outline: none;
+        }
+        .send-btn {
+            padding: 0 20px; border-radius: 12px; border: none;
+            background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer;
+        }
+
+        /* منطقة النتائج المطورة */
+        #output-area { 
+            width: 100%; 
+            max-width: 800px; 
+            overflow-y: auto; 
+            flex: 1;
+            padding-bottom: 20px;
+        }
+        .chat-card {
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 20px;
+            border-right: 5px solid var(--accent-blue);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        #user-q { color: var(--accent-blue); font-size: 0.95rem; margin-bottom: 12px; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        
+        /* تحسين عرض النص القانوني (جداول ونقاط) */
+        #bot-p { 
+            line-height: 1.8; 
+            font-size: 1.15rem; 
+            white-space: pre-line; /* للحفاظ على تنسيق الأسطر في الجداول */
+        }
+
+        @keyframes breathe { 50% { transform: scale(1.05); opacity: 0.8; } }
+        
+        /* سكرول بار أنيق */
+        #output-area::-webkit-scrollbar { width: 6px; }
+        #output-area::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>المساعد القانوني الذكي</h1>
+        <p id="status-text">نظام الرد الآلي على لائحة المناطق المحمية</p>
+    </div>
+
+    <div class="mode-selector">
+        <button id="btn-mode-voice" class="mode-btn active" onclick="switchMode('voice')">🎤 تحدث</button>
+        <button id="btn-mode-text" class="mode-btn" onclick="switchMode('text')">⌨️ اكتب</button>
+    </div>
+
+    <div class="interaction-container">
+        <div id="voice-section">
+            <button id="action-btn" class="circle-btn" 
+                    onmousedown="startVoice()" onmouseup="stopVoice()"
+                    ontouchstart="startVoice()" ontouchend="stopVoice()">
+                <span id="mic-icon" style="font-size: 3rem;">🎤</span>
+                <span id="btn-text">اضغط للتحدث</span>
+            </button>
+        </div>
+
+        <div id="text-section">
+            <div class="input-group">
+                <input type="text" id="text-input" placeholder="اسأل عن الغرامات، المسموحات، أو المحظورات..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendTextQuery()">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="output-area">
+        <div class="chat-card">
+            <div id="user-q" style="display: none;">سؤالك: <span id="user-text"></span></div>
+            <div id="bot-p">أهلاً بك! يمكنك سؤالي عن أي مادة في لائحة المناطق المحمية، مثلاً: "ما هي غرامة رعي الإبل؟" أو "ما هي شروط دخول المحميات؟"</div>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+
+        function switchMode(mode) {
+            document.getElementById('voice-section').style.display = (mode === 'voice') ? 'flex' : 'none';
+            document.getElementById('text-section').style.display = (mode === 'text') ? 'block' : 'none';
+            document.getElementById('btn-mode-voice').classList.toggle('active', mode === 'voice');
+            document.getElementById('btn-mode-text').classList.toggle('active', mode === 'text');
+            document.getElementById('status-text').innerText = (mode === 'voice') ? "اضغط مطولاً على الميكروفون" : "اكتب استفسارك القانوني";
+        }
+
+        async function startVoice() {
+            if (isRecording) return;
+            isRecording = true;
+            document.getElementById('action-btn').classList.add('listening');
+            document.getElementById('btn-text').innerText = "جاري الاستماع...";
+        }
+
+        async function stopVoice() {
+            if (!isRecording) return;
+            isRecording = false;
+            processQuery(null); 
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendTextQuery(); }
+
+        function sendTextQuery() {
+            const input = document.getElementById('text-input');
+            const query = input.value.trim();
+            if (!query) return;
+            processQuery(query);
+            input.value = "";
+        }
+
+        async function processQuery(manualQuery) {
+            const btn = document.getElementById('action-btn');
+            const status = document.getElementById('status-text');
+            const botP = document.getElementById('bot-p');
+            const userQ = document.getElementById('user-q');
+            const userText = document.getElementById('user-text');
+
+            btn.classList.remove('listening');
+            btn.classList.add('thinking');
+            btn.disabled = true;
+            status.innerText = "جاري البحث في اللائحة...";
+
+            try {
+                const formData = new FormData();
+                if (manualQuery) {
+                    formData.append('query', manualQuery);
+                } else {
+                    formData.append('use_voice', 'true');
+                }
+
+                const response = await fetch('/llm/voice-interaction', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    userQ.style.display = "block";
+                    userText.innerText = data.query;
+                    botP.innerText = data.response;
+                    status.innerText = "تم العثور على المادة القانونية";
+                } else {
+                    status.innerText = "تنبيه";
+                    botP.innerText = data.message || "عذراً، لم أجد إجابة دقيقة في اللائحة.";
+                }
+            } catch (error) {
+                status.innerText = "خطأ في الاتصال بالسيرفر";
+                botP.innerText = "تأكد من تشغيل السيرفر والموديل (Ollama).";
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('thinking');
+                document.getElementById('btn-text').innerText = "اضغط للتحدث";
+            }
+        }
+    </script>
+</body>
+</html>
