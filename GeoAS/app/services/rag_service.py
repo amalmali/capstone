@@ -1,0 +1,68 @@
+from services.retriever_service import retrievers
+from services.llm_service import generate
+import re
+
+# الـ Prompt المطور بنظام "الحدود المغلقة" لضمان الدقة القانونية
+PROMPT_TEMPLATE =  """أنت خبير قانوني بيئي. مهمتك هي الإجابة عن أسئلة المستخدم "حصرياً" من واقع اللائحة المرفقة في السياق أدناه.
+
+### قواعد ذهبية للرد:
+1. الالتزام بالأرقام: إذا سئلت عن غرامة، ابحث عنها في "جدول المخالفات والعقوبات" في نهاية السياق وانقل الرقم كما هو (مثلاً: 20,000 ريال).
+2. منع الهلوسة: لا تخترع عقوبات مثل "إيقاف النشاط" أو "حظر بيئي" ما لم تكن مكتوبة نصاً أمامك في السياق.
+3. الدقة القانونية: إذا لم تجد قيمة الغرامة أو تفصيل المخالفة في النص المرفق، قل فوراً: "عذراً، هذه المعلومة غير متوفرة في اللائحة المرفقة".
+4. الصياغة: ابدأ إجابتك بعبارة "وفقاً للائحة التنفيذية للمناطق المحمية..." ثم اذكر المادة أو العقوبة.
+
+### السياق القانوني المستخرج:
+{context}
+
+---
+### سؤال المستخدم:
+{question}
+
+الإجابة الموثقة:"""
+
+def answer(query: str, pdf_name: str):
+    # 1. التحقق من تحميل قاعدة البيانات الخاصة بالملف
+    retriever = retrievers.get(pdf_name)
+    if not retriever:
+        return "عذراً، محرك البحث القانوني غير جاهز حالياً. يرجى الانتظار لحظات.", ""
+
+    # 2. استرجاع النصوص ذات الصلة (Context)
+  
+    docs = retriever.invoke(query)
+    
+    formatted_contexts = []
+    for i, doc in enumerate(docs):
+        # تنظيف متقدم للنص (Regex) لضمان جودة استخراج الجداول:
+        # - إزالة المسافات الزائدة والرموز الغريبة التي تنتج عن تحويل الـ PDF العربي
+        text = doc.page_content
+        text = re.sub(r'\s+', ' ', text)  # توحيد المسافات
+        text = re.sub(r'[^\w\s\.\-\(\)%٠-٩,،:]', '', text) # تنظيف مع الحفاظ على الأرقام العربية وعلامات الترقيم الأساسية
+        clean_content = text.strip()
+        
+        # إضافة إشارة لمصدر القطعة النصية لتنظيم ذهن الموديل
+        formatted_contexts.append(f"--- [الفقرة/المادة رقم {i+1}] ---\n{clean_content}")
+    
+    context = "\n\n".join(formatted_contexts)
+
+    # 3. حماية في حال فشل الاسترجاع أو عدم وجود نتائج مطابقة
+    if not context.strip():
+        return "عذراً، لم أجد نصوصاً في اللائحة الحالية تتعلق بهذا الاستفسار.", ""
+
+    # 4. بناء الـ Prompt ودمج السؤال مع السياق
+    final_prompt = PROMPT_TEMPLATE.format(context=context, question=query)
+
+    # 5. طلب الإجابة من الموديل (Qwen 2.5 1.5B)
+    response = generate(final_prompt)
+    
+    # 6. معالجة الرد (Post-processing) لمنع الاستنتاجات الشخصية للموديل
+    # إذا بدأ الموديل بكلمات تدل على التخمين، يتم حجب الإجابة لضمان الدقة
+    forbidden_indicators = [
+        "بناءً على فهمي", "ربما", "أعتقد", "بشكل عام", 
+        "من المحتمل", "على الأرجح", "قد يكون"
+    ]
+    
+    check_response = response.strip()
+    if any(check_response.startswith(phrase) for phrase in forbidden_indicators):
+        return "عذراً، التفاصيل الدقيقة لهذا السؤال غير منصوص عليها بوضوح في اللائحة المرفقة.", context
+
+    return response.strip(), context
