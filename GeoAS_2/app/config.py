@@ -28,7 +28,7 @@ ALERT_SOUND = str(BASE_DIR / "gps_alert.mp3")
 DB_CONFIG = {
     "dbname": "data",
     "user": "postgres",
-    "password": "Ee0590113914",
+    "password": "Ee14",
     "host": "localhost",
     "port": 5432
 }
@@ -52,4 +52,5 @@ EDGE_TTS_VOLUME = "+0%"
 
 # 5. إعدادات عامة
 LOG_LEVEL = logging.INFO
+
 
