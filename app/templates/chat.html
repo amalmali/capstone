@@ -35,7 +35,6 @@
         .header h1 { margin: 0; font-size: 1.8rem; color: var(--accent-blue); }
         .header p { color: var(--text-dim); margin-top: 6px; }
 
-        /* محول الأنماط */
         .mode-selector {
             display: flex; gap: 10px; margin-bottom: 18px;
             background: var(--card-bg); padding: 8px; border-radius: 50px;
@@ -53,7 +52,6 @@
             box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
         }
 
-        /* حاوية التفاعل */
         .interaction-container {
             width: 100%; max-width: 900px;
             display: flex; flex-direction: column; align-items: center;
@@ -64,30 +62,20 @@
         .circle-btn {
             width: 150px; height: 150px; border-radius: 50%;
             border: none; background: var(--accent-blue); color: white;
-            cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; transition: all 0.3s;
             display: flex; flex-direction: column; align-items: center;
             justify-content: center; gap: 8px; user-select: none;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
 
-        .circle-btn.listening { 
-            background: var(--accent-red) !important; 
-            box-shadow: 0 0 40px rgba(239,68,68,0.6); 
-            transform: scale(1.1); 
-        }
-
-        .circle-btn.thinking { 
-            background: var(--accent-purple) !important; 
-            animation: breathe 1.5s infinite; 
-        }
+        .circle-btn.listening { background: var(--accent-red) !important; }
+        .circle-btn.thinking { background: var(--accent-purple) !important; }
 
         #text-section { 
             display: none; width: 100%;
             background: var(--card-bg); padding: 14px; border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* منطقة النتائج */
         #output-area {
             width: 100%; max-width: 900px; flex: 1;
             overflow-y: auto; padding-bottom: 120px;
@@ -97,26 +85,18 @@
             background: var(--card-bg); padding: 20px; border-radius: 16px;
             border-right: 5px solid var(--accent-blue);
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: fadeIn 0.4s ease;
             margin-bottom: 12px;
         }
 
-        #user-q { color: var(--accent-blue); font-size: 0.9rem; margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 5px; display: none; }
+        #user-q { color: var(--accent-blue); font-size: 0.9rem; margin-bottom: 8px; font-weight: bold; display: none; }
         #bot-p { line-height: 1.8; font-size: 1.05rem; }
 
-        /* ====== صندوق فحص الإحداثيات ====== */
         .gps-form-card {
             background: var(--card-bg);
-            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 14px;
             width: 100%;
-        }
-
-        .gps-form-card h3 {
-            margin: 0 0 10px 0;
-            color: var(--accent-blue);
         }
 
         .gps-grid {
@@ -133,232 +113,71 @@
             color: white;
         }
 
-        .gps-actions {
-            display: flex; gap: 10px; margin-top: 10px;
-        }
-
         .gps-actions button {
             padding: 10px 18px; border-radius: 10px; border: none;
             background: var(--accent-blue); color: white; font-weight: bold;
-            cursor: pointer;
         }
 
-        .gps-result {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 10px;
-            background: #0f172a;
-            font-weight: bold;
-        }
-
-        /* شريط الحالة السفلي */
         #gps-alert-bar {
             position: fixed; bottom: 0; left: 0; width: 100%;
             padding: 16px; text-align: center; font-weight: bold;
             background: #334155; color: white;
-            transition: background 0.6s ease; z-index: 1000;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            font-size: 1.05rem; box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
         }
-
-        @keyframes breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: 0.7; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 
 <body>
 
-    <!-- العنوان -->
-    <div class="header">
-        <h1>المساعد القانوني الذكي</h1>
-        <p id="status-text">اضغط على الميكروفون أو أدخل إحداثيات الموقع للتحقق من المحميات</p>
-    </div>
+<div class="header">
+    <h1>المساعد القانوني الذكي</h1>
+    <p id="status-text">الخريطة تظهر تلقائيًا عند فتح الصفحة</p>
+</div>
 
-    <!-- اختيار نمط الإدخال -->
-    <div class="mode-selector">
-        <button id="btn-mode-voice" class="mode-btn active" onclick="switchMode('voice')">🎤 نمط التحدث</button>
-        <button id="btn-mode-text" class="mode-btn" onclick="switchMode('text')">⌨️ نمط الكتابة</button>
-    </div>
+<div id="output-area">
 
-    <!-- حاوية التفاعل -->
-    <div class="interaction-container">
-
-        <!-- نمط الصوت -->
-        <div id="voice-section">
-            <button id="action-btn" class="circle-btn" onmousedown="startVoice()" onmouseup="stopVoice()">
-                <span id="mic-icon" style="font-size: 3rem;">🎤</span>
-                <span id="btn-text">تحدث الآن</span>
-            </button>
-        </div>
-
-        <!-- نمط الكتابة -->
-        <div id="text-section">
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="text-input"
-                       style="flex:1; padding:12px; border-radius:12px; border:none; background:#0f172a; color:white;"
-                       placeholder="اكتب سؤالك هنا...">
-                <button onclick="sendTextQuery()"
-                        style="padding:10px 20px; border-radius:12px; border:none; background:var(--accent-blue); color:white; font-weight:bold;">
-                    إرسال
-                </button>
-            </div>
+    <div class="chat-card">
+        <div id="user-q">سؤالك: <span id="user-text"></span></div>
+        <div id="bot-p">
+            مرحباً بك في نظام المساعدة الذكي.
         </div>
     </div>
 
-    <!-- منطقة المخرجات -->
-    <div id="output-area">
-
-        <!-- ====== بطاقة فحص الإحداثيات ====== -->
-        <div class="gps-form-card">
-            <h3>📍 فحص موقع داخل محمية</h3>
-            <form id="gpsForm">
-                <div class="gps-grid">
-                    <input type="number" step="0.000001" name="latitude" placeholder="Latitude (مثال: 24.7136)" required>
-                    <input type="number" step="0.000001" name="longitude" placeholder="Longitude (مثال: 46.6753)" required>
-                    <input type="number" name="officer_id" placeholder="Officer ID (اختياري)">
-                </div>
-                <div class="gps-actions">
-                    <button type="submit">تحقق من الموقع</button>
-                </div>
-            </form>
-
-            <div id="gps-form-result" class="gps-result" style="display:none;"></div>
-        </div>
-
-        <!-- بطاقة الدردشة -->
+    <!-- ====== الخريطة ====== -->
+    <div id="map-container" style="margin-top: 14px; display: none;">
         <div class="chat-card">
-            <div id="user-q">سؤالك: <span id="user-text"></span></div>
-            <div id="bot-p">
-                مرحباً بك في نظام المساعدة الذكي. يمكنك:
-                <br>• سؤال النظام صوتيًا أو كتابيًا
-                <br>• أو إدخال إحداثيات موقع للتحقق هل هو داخل محمية
-            </div>
+            <h3 style="color: var(--accent-blue); margin-top: 0;">🗺️ الخريطة</h3>
+            <iframe id="map-frame" width="100%" height="450px" style="border:none; border-radius:12px;"></iframe>
         </div>
-
     </div>
 
-    <!-- شريط الحالة السفلي -->
-    <div id="gps-alert-bar">
-        <span id="gps-status-icon">📡</span>
-        <span id="gps-status-text">جاهز لاستقبال الإحداثيات أو الأسئلة...</span>
-    </div>
+</div>
 
-    <script>
-        let isRecording = false;
+<div id="gps-alert-bar">
+    <span>📡 النظام جاهز</span>
+</div>
 
-        /* =========================
-           1) إدارة أنماط الإدخال
-        ========================= */
-        function switchMode(mode) {
-            document.getElementById('voice-section').style.display = (mode === 'voice') ? 'flex' : 'none';
-            document.getElementById('text-section').style.display = (mode === 'text') ? 'block' : 'none';
-            document.getElementById('btn-mode-voice').classList.toggle('active', mode === 'voice');
-            document.getElementById('btn-mode-text').classList.toggle('active', mode === 'text');
+<script>
+    async function processRequest(query) {
+        const formData = new FormData();
+        if (query) formData.append('query', query);
+        formData.append('use_voice', 'false');
+
+        const resp = await fetch('/llm/voice-interaction', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.status === 'success' && data.map_path) {
+            const mapContainer = document.getElementById("map-container");
+            const mapFrame = document.getElementById("map-frame");
+            mapContainer.style.display = "block";
+            mapFrame.src = data.map_path;
         }
+    }
 
-        /* =========================
-           2) الصوت
-        ========================= */
-        function startVoice() {
-            isRecording = true;
-            const btn = document.getElementById('action-btn');
-            btn.classList.add('listening');
-            document.getElementById('btn-text').innerText = "استمر في التحدث";
-        }
-
-        function stopVoice() {
-            if (!isRecording) return;
-            isRecording = false;
-            processRequest(null);
-        }
-
-        function sendTextQuery() {
-            const q = document.getElementById('text-input').value;
-            if (q.trim()) processRequest(q);
-        }
-
-        /* =========================
-           3) إرسال طلب الذكاء الاصطناعي
-        ========================= */
-        async function processRequest(query) {
-            const btn = document.getElementById('action-btn');
-            const statusText = document.getElementById('status-text');
-            const botP = document.getElementById('bot-p');
-            const userQ = document.getElementById('user-q');
-
-            btn.classList.remove('listening');
-            btn.classList.add('thinking');
-            btn.disabled = true;
-            statusText.innerText = "جاري استشارة المحرك القانوني...";
-
-            const formData = new FormData();
-            if (query) formData.append('query', query);
-            formData.append('use_voice', 'true');
-
-            try {
-                const resp = await fetch('/llm/voice-interaction', { method: 'POST', body: formData });
-                const data = await resp.json();
-
-                if (data.status === 'success') {
-                    userQ.style.display = "block";
-                    document.getElementById('user-text').innerText = data.query;
-                    botP.innerText = data.response;
-                    statusText.innerText = "تمت الإجابة";
-                } else {
-                    botP.innerText = data.message;
-                    statusText.innerText = "حاول مرة أخرى";
-                }
-            } catch (err) {
-                botP.innerText = "فشل الاتصال بالنظام الذكي.";
-            } finally {
-                btn.classList.remove('thinking');
-                btn.disabled = false;
-                document.getElementById('btn-text').innerText = "تحدث الآن";
-            }
-        }
-
-        /* =========================
-           4) فحص الإحداثيات من الفورم
-        ========================= */
-        document.getElementById("gpsForm").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const resultBox = document.getElementById("gps-form-result");
-            const bar = document.getElementById('gps-alert-bar');
-            const text = document.getElementById('gps-status-text');
-            const icon = document.getElementById('gps-status-icon');
-
-            resultBox.style.display = "block";
-            resultBox.innerText = "⏳ جارٍ التحقق من الموقع...";
-
-            try {
-                const response = await fetch("/llm/check-point", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    if (data.inside) {
-                        resultBox.innerHTML = `✅ داخل محمية<br>الاسم: ${data.zone_name || "—"}<br>مستوى الحماية: ${data.protection_level || "—"}`;
-                        bar.style.backgroundColor = "var(--accent-green)";
-                        icon.innerText = "✅";
-                        text.innerText = "داخل إحدى المناطق المحمية";
-                    } else {
-                        resultBox.innerHTML = "❌ خارج جميع المحميات";
-                        bar.style.backgroundColor = "var(--accent-red)";
-                        icon.innerText = "⚠️";
-                        text.innerText = "خارج المناطق المحمية";
-                    }
-                } else {
-                    resultBox.innerText = data.message || "حدث خطأ أثناء الفحص";
-                }
-            } catch (err) {
-                resultBox.innerText = "فشل الاتصال بالخادم.";
-            }
-        });
-    </script>
+    // 🔥 استدعاء تلقائي عند فتح الصفحة لرسم الخريطة
+    window.onload = async function() {
+        await processRequest("ارسم الخريطة");
+    };
+</script>
 
 </body>
 </html>

@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 # استيراد الراوتر
@@ -39,6 +40,9 @@ async def lifespan(app: FastAPI):
 # إنشاء تطبيق FastAPI
 # ======================================================
 app = FastAPI(title="Smart Kiosk - Protected Zones", lifespan=lifespan)
+
+# 🔹 ربط مجلد static (لعرض الخريطة)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # تضمين الراوتر
 app.include_router(router)

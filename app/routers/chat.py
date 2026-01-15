@@ -4,18 +4,15 @@ from fastapi.templating import Jinja2Templates
 from typing import Optional
 import logging
 
-# استيراد الخدمات الخاصة بالمشروع (الذكاء الاصطناعي والصوت)
+# استيراد الخدمات الخاصة بالمشروع (الصوت)
 from services.audio_utils import listen_to_mic, speak_text
-from services.rag_service import answer
-from services.retriever_service import retrievers
+
+# 🔹 بدل RAG المباشر: نستعمل الـ Agent
+from services.spatial_agent import agent
 
 # إعداد الراوتر والقوالب
 router = APIRouter(prefix="/llm")
 templates = Jinja2Templates(directory="templates")
-
-# ملاحظة: سيتم تمرير قاعدة البيانات من التطبيق الأساسي (app)
-# عبر request.app.state.db_gps
-
 
 # ============================
 # واجهة الدردشة
@@ -105,7 +102,7 @@ async def check_point(
 
 
 # ============================
-# مسار الصوت والـ RAG (كما هو)
+# 🎤 مسار الصوت + RAG Agent (يرسم خريطة دائمًا)
 # ============================
 @router.post("/voice-interaction")
 async def voice_interaction(
@@ -113,7 +110,7 @@ async def voice_interaction(
     query: Optional[str] = Form(None), 
     use_voice: bool = Form(True)
 ):
-    """المعالجة الذكية للسؤال والرد"""
+    """المعالجة الذكية للسؤال والرد + رسم الخريطة تلقائيًا"""
     
     # 1. تحديد مصدر السؤال
     if query and query.strip():
@@ -128,28 +125,20 @@ async def voice_interaction(
             "message": "لم أتمكن من سماعك بوضوح."
         })
 
-    # 3. التحقق من تحميل الملفات
-    if not retrievers:
-        return JSONResponse({
-            "status": "error", 
-            "message": "نظام اللوائح قيد التحميل..."
-        })
-    
-    pdf_name = list(retrievers.keys())[0]
-
     try:
-        # 4. توليد الإجابة (RAG)
-        response_text, context = answer(user_query, pdf_name)
-        
-        # 5. نطق الرد في الخلفية
-        if use_voice and response_text:
-            background_tasks.add_task(speak_text, response_text)
+        # 3. تشغيل الـ RAG Agent (يرسم خريطة في كل مرة)
+        result = agent.invoke({"input": user_query})
 
-        # 6. إرسال الرد للواجهة
+        # 4. نطق الرد في الخلفية
+        if use_voice and result.get("output"):
+            background_tasks.add_task(speak_text, result["output"])
+
+        # 5. إرسال الرد + مسار الخريطة للواجهة
         return JSONResponse({
             "status": "success", 
             "query": user_query, 
-            "response": response_text
+            "response": result["output"],
+            "map_path": result["map_path"]  # تُستخدم لعرض الخريطة في HTML
         })
         
     except Exception as e:
