@@ -29,11 +29,11 @@ ALERT_SOUND = str(BASE_DIR / "gps_alert.mp3")
 
 # 3. إعدادات قاعدة البيانات
 DB_CONFIG = {
-    "dbname": "GeoAS",
-    "user": "postgres",
-    "password": "2002",
     "host": "localhost",
-    "port": 5432
+    "port": 5432,          # ⚠️ مهم: نفس البورت في PostgreSQL 18
+    "dbname": "GeoAS",     # ✅ اسم القاعدة الصحيح
+    "user": "postgres",
+    "password": "2002"
 }
 
 # 4. إعدادات الصوت والذكاء الاصطناعي
@@ -55,5 +55,3 @@ EDGE_TTS_VOLUME = "+0%"
 
 # 5. إعدادات عامة
 LOG_LEVEL = logging.INFO
-
-

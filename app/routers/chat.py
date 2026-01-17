@@ -1,149 +1,89 @@
+# routers/chat.py
 from fastapi import APIRouter, Request, Form, BackgroundTasks
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
-import logging
+from pydantic import BaseModel
 
-# استيراد الخدمات الخاصة بالمشروع (الصوت)
 from services.audio_utils import listen_to_mic, speak_text
+from services.rag_service import answer
+from services.retriever_service import retrievers
+from services.db import Database
 
-# 🔹 بدل RAG المباشر: نستعمل الـ Agent
-from services.spatial_agent import agent
-
-# إعداد الراوتر والقوالب
 router = APIRouter(prefix="/llm")
 templates = Jinja2Templates(directory="templates")
 
-# ============================
-# واجهة الدردشة
-# ============================
+# =========================
+# صفحة الواجهة
+# =========================
 @router.get("/chat", response_class=HTMLResponse)
-async def get_kiosk_page(request: Request):
-    """عرض صفحة الدردشة الخاصة بنظام الكشك"""
+async def chat_page(request: Request):
     return templates.TemplateResponse("chat.html", {"request": request})
 
+# =========================
+# بيانات الخريطة
+# =========================
+@router.get("/map-data")
+async def map_data(request: Request):
+    db: Database = request.app.state.db_gps
+    return {
+        "zones": db.get_zones_geojson(),
+        "points": db.get_points_geojson()
+    }
 
-# ============================
-# جلب آخر حالة محفوظة (اختياري)
-# ============================
-@router.get("/gps-status")
-async def get_gps_status(request: Request):
-    """جلب آخر حالة داخل/خارج من قاعدة البيانات"""
-    db_gps = getattr(request.app.state, "db_gps", None)
-    
-    if not db_gps:
-        return {"status": "error", "message": "قاعدة البيانات غير متصلة"}
-    
-    try:
-        with db_gps.conn.cursor() as cur:
-            cur.execute("""
-                SELECT inside_geofence
-                FROM officer_tracking
-                ORDER BY timestamp DESC
-                LIMIT 1;
-            """)
-            result = cur.fetchone()
-            is_inside = result[0] if result else False
-            
-        return {
-            "status": "success",
-            "is_inside": is_inside,
-            "message": f"حالتك الآن: {'داخل' if is_inside else 'خارج'} إحدى المناطق المحمية"
-        }
+# =========================
+# إضافة نقطة (من الخريطة)
+# =========================
+class PointIn(BaseModel):
+    lat: float
+    lng: float
 
-    except Exception as e:
-        logging.error(f"❌ خطأ في جلب بيانات الموقع: {e}")
-        return {"status": "error", "message": "حدث خطأ أثناء فحص الموقع"}
+@router.post("/add-point")
+async def add_point(point: PointIn, request: Request):
+    db: Database = request.app.state.db_gps
 
+    # نحدد هل داخل محمية
+    inside = db.is_inside_protected_zone(point.lat, point.lng)
 
-# ============================
-# 🔹 فحص نقطة من الفورم وحفظها
-# ============================
-@router.post("/check-point")
-async def check_point(
-    request: Request,
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    officer_id: Optional[int] = Form(None)
-):
-    """
-    يستقبل إحداثيات من المستخدم:
-    - يفحص هل النقطة داخل أي محمية (protected_zones)
-    - يحفظ النتيجة في officer_tracking (inside_geofence فقط)
-    - يرجّع الاسم ومستوى الحماية في الاستجابة (بدون تخزينهم)
-    """
-    db = getattr(request.app.state, "db_gps", None)
+    # نحفظ فورًا
+    db.save_point(
+        lat=point.lat,
+        lon=point.lng,
+        inside_geofence=inside,
+        officer_id=None
+    )
 
-    if not db:
-        return JSONResponse({"status": "error", "message": "قاعدة البيانات غير متصلة"})
+    # نرجّع النتيجة للواجهة
+    return {
+        "status": "saved",
+        "inside": inside
+    }
 
-    try:
-        # فحص هل النقطة داخل أي محمية
-        zone_name, protection_level = db.get_intersecting_zone_info(latitude, longitude)
-        inside = True if zone_name else False
-
-        # حفظ النقطة في قاعدة البيانات (بدون تغيير بنية الجدول)
-        db.save_point(latitude, longitude, inside, officer_id)
-
-        return JSONResponse({
-            "status": "success",
-            "inside": inside,
-            "zone_name": zone_name,
-            "protection_level": protection_level,
-            "message": "داخل منطقة محمية" if inside else "خارج جميع المناطق المحمية"
-        })
-
-    except Exception as e:
-        logging.error(f"❌ خطأ في فحص النقطة: {e}")
-        return JSONResponse({
-            "status": "error",
-            "message": "حدث خطأ أثناء التحقق من الموقع"
-        })
-
-
-# ============================
-# 🎤 مسار الصوت + RAG Agent (يرسم خريطة دائمًا)
-# ============================
+# =========================
+# صوت + RAG (ما لمسناه)
+# =========================
 @router.post("/voice-interaction")
 async def voice_interaction(
     background_tasks: BackgroundTasks,
-    query: Optional[str] = Form(None), 
+    query: Optional[str] = Form(None),
     use_voice: bool = Form(True)
 ):
-    """المعالجة الذكية للسؤال والرد + رسم الخريطة تلقائيًا"""
-    
-    # 1. تحديد مصدر السؤال
     if query and query.strip():
         user_query = query.strip()
     else:
         user_query = listen_to_mic(timeout=5)
-    
-    # 2. التحقق من صحة السؤال
+
     if not user_query:
-        return JSONResponse({
-            "status": "no_speech", 
-            "message": "لم أتمكن من سماعك بوضوح."
-        })
+        return {"status": "no_speech"}
 
-    try:
-        # 3. تشغيل الـ RAG Agent (يرسم خريطة في كل مرة)
-        result = agent.invoke({"input": user_query})
+    pdf_name = list(retrievers.keys())[0]
+    response_text, _ = answer(user_query, pdf_name)
 
-        # 4. نطق الرد في الخلفية
-        if use_voice and result.get("output"):
-            background_tasks.add_task(speak_text, result["output"])
+    if use_voice:
+        background_tasks.add_task(speak_text, response_text)
 
-        # 5. إرسال الرد + مسار الخريطة للواجهة
-        return JSONResponse({
-            "status": "success", 
-            "query": user_query, 
-            "response": result["output"],
-            "map_path": result["map_path"]  # تُستخدم لعرض الخريطة في HTML
-        })
-        
-    except Exception as e:
-        logging.error(f"❌ خطأ في المعالجة: {e}")
-        return JSONResponse({
-            "status": "error", 
-            "message": "حدث خطأ فني أثناء استخراج المعلومة."
-        })
+    return {
+        "status": "success",
+        "query": user_query,
+        "response": response_text
+    }

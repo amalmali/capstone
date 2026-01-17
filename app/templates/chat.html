@@ -1,182 +1,268 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المساعد القانوني الذكي | الكشك الذكي</title>
+<meta charset="UTF-8">
+<title>Geospatial Assistance System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        :root {
-            --primary-bg: #0f172a;
-            --card-bg: #1e293b;
-            --accent-blue: #38bdf8;
-            --accent-red: #ef4444;
-            --accent-green: #22c55e;
-            --accent-purple: #8b5cf6;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-        }
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        body {
-            margin: 0;
-            background: var(--primary-bg);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
+<style>
+:root{
+  --primary-bg:#0f172a;
+  --card-bg:#1e293b;
+  --accent-blue:#38bdf8;
+  --accent-green:#22c55e;
+  --accent-red:#ef4444;
+  --text-main:#f8fafc;
+  --text-dim:#94a3b8;
+}
+body{
+  margin:0;
+  background:var(--primary-bg);
+  color:var(--text-main);
+  font-family:'Segoe UI',Tahoma;
+  padding:20px;
+}
+.header{text-align:center;margin-bottom:24px}
+.header h1{margin:0;color:var(--accent-blue)}
+.header p{color:var(--text-dim);margin-top:6px}
 
-        .header { text-align: center; margin-bottom: 16px; }
-        .header h1 { margin: 0; font-size: 1.8rem; color: var(--accent-blue); }
-        .header p { color: var(--text-dim); margin-top: 6px; }
+.mode-selector{
+  display:flex;justify-content:center;gap:10px;
+  background:var(--card-bg);padding:8px;
+  border-radius:40px;max-width:320px;margin:0 auto 30px;
+}
+.mode-btn{
+  border:none;padding:10px 22px;border-radius:30px;
+  background:transparent;color:var(--text-dim);
+  cursor:pointer;font-weight:bold;
+}
+.mode-btn.active{background:var(--accent-blue);color:#fff}
 
-        .mode-selector {
-            display: flex; gap: 10px; margin-bottom: 18px;
-            background: var(--card-bg); padding: 8px; border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
+.main-layout{
+  display:grid;
+  grid-template-columns:1fr 1.3fr;
+  gap:24px;
+  max-width:1200px;
+  margin:auto;
+}
 
-        .mode-btn {
-            padding: 10px 20px; border-radius: 40px; border: none;
-            cursor: pointer; background: transparent; color: var(--text-dim);
-            font-weight: bold; transition: 0.3s;
-        }
+.panel{
+  background:var(--card-bg);
+  border-radius:18px;
+  padding:20px;
+  border:1px solid rgba(255,255,255,.08);
+  position:relative;
+}
 
-        .mode-btn.active {
-            background: var(--accent-blue); color: white;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
-        }
+#voice-section{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:220px;
+}
+.circle-btn{
+  width:160px;height:160px;border-radius:50%;
+  border:none;background:var(--accent-blue);
+  color:#fff;font-size:1.1rem;cursor:pointer;
+}
 
-        .interaction-container {
-            width: 100%; max-width: 900px;
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; margin-bottom: 14px;
-        }
+#text-section{display:none}
+#text-input{
+  width:100%;padding:12px;border-radius:12px;border:none;
+  margin-bottom:10px;
+}
+#send-text-btn{
+  width:100%;padding:10px;border-radius:10px;
+  border:none;background:var(--accent-blue);
+  color:#fff;font-weight:bold;cursor:pointer;
+}
 
-        #voice-section { display: flex; flex-direction: column; align-items: center; }
-        .circle-btn {
-            width: 150px; height: 150px; border-radius: 50%;
-            border: none; background: var(--accent-blue); color: white;
-            cursor: pointer; transition: all 0.3s;
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 8px; user-select: none;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
+/* Map */
+#map{height:500px;border-radius:16px}
+.map-input{
+  position:absolute;top:14px;left:14px;
+  background:#020617cc;padding:8px;
+  border-radius:10px;z-index:999;
+}
+.map-input input{width:80px}
+.map-input button{
+  background:var(--accent-blue);
+  border:none;border-radius:8px;
+  color:#fff;padding:6px 10px;
+  cursor:pointer;
+}
 
-        .circle-btn.listening { background: var(--accent-red) !important; }
-        .circle-btn.thinking { background: var(--accent-purple) !important; }
+.legend{margin-top:10px;color:var(--text-dim);font-size:.85rem}
 
-        #text-section { 
-            display: none; width: 100%;
-            background: var(--card-bg); padding: 14px; border-radius: 16px;
-        }
+/* Results */
+.results{max-width:1200px;margin:30px auto 100px}
+.chat-card{
+  background:var(--card-bg);
+  border-radius:16px;
+  padding:18px;
+  border-right:5px solid var(--accent-blue);
+}
 
-        #output-area {
-            width: 100%; max-width: 900px; flex: 1;
-            overflow-y: auto; padding-bottom: 120px;
-        }
-
-        .chat-card {
-            background: var(--card-bg); padding: 20px; border-radius: 16px;
-            border-right: 5px solid var(--accent-blue);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 12px;
-        }
-
-        #user-q { color: var(--accent-blue); font-size: 0.9rem; margin-bottom: 8px; font-weight: bold; display: none; }
-        #bot-p { line-height: 1.8; font-size: 1.05rem; }
-
-        .gps-form-card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 14px;
-            width: 100%;
-        }
-
-        .gps-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .gps-grid input {
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            background: #0f172a;
-            color: white;
-        }
-
-        .gps-actions button {
-            padding: 10px 18px; border-radius: 10px; border: none;
-            background: var(--accent-blue); color: white; font-weight: bold;
-        }
-
-        #gps-alert-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            padding: 16px; text-align: center; font-weight: bold;
-            background: #334155; color: white;
-        }
-    </style>
+/* Bottom alert */
+#gps-alert-bar{
+  position:fixed;bottom:0;left:0;
+  width:100%;padding:14px;
+  text-align:center;
+  background:#334155;
+  font-weight:bold;
+}
+</style>
 </head>
 
 <body>
 
 <div class="header">
-    <h1>المساعد القانوني الذكي</h1>
-    <p id="status-text">الخريطة تظهر تلقائيًا عند فتح الصفحة</p>
+  <h1>Geospatial Assistance System</h1>
+  <p>اضغط على الميكروفون أو استخدم الخريطة</p>
 </div>
 
-<div id="output-area">
+<div class="mode-selector">
+  <button class="mode-btn active" id="voiceBtn" onclick="switchMode('voice')">🎤 التحدث</button>
+  <button class="mode-btn" id="textBtn" onclick="switchMode('text')">⌨️ الكتابة</button>
+</div>
 
-    <div class="chat-card">
-        <div id="user-q">سؤالك: <span id="user-text"></span></div>
-        <div id="bot-p">
-            مرحباً بك في نظام المساعدة الذكي.
-        </div>
+<div class="main-layout">
+
+  <!-- Interaction -->
+  <div class="panel">
+    <h3>اسألني</h3>
+
+    <div id="voice-section">
+      <button class="circle-btn">🎤<br>تحدث الآن</button>
     </div>
 
-    <!-- ====== الخريطة ====== -->
-    <div id="map-container" style="margin-top: 14px; display: none;">
-        <div class="chat-card">
-            <h3 style="color: var(--accent-blue); margin-top: 0;">🗺️ الخريطة</h3>
-            <iframe id="map-frame" width="100%" height="450px" style="border:none; border-radius:12px;"></iframe>
-        </div>
+    <div id="text-section">
+      <input id="text-input" placeholder="اكتب سؤالك هنا...">
+      <button id="send-text-btn">إرسال</button>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="panel">
+    <h3>الخريطة</h3>
+
+    <div class="map-input">
+      <input id="lat" placeholder="Lat">
+      <input id="lng" placeholder="Lng">
+      <button onclick="addPoint()">إضافة</button>
     </div>
 
+    <div id="map"></div>
+
+    <div class="legend">
+      🔵 موقعك الحالي<br>
+      🟢 داخل المحمية — 🔴 خارج المحمية
+    </div>
+  </div>
+</div>
+
+<div class="results">
+  <div class="chat-card">
+    <div id="bot-p">مرحبًا بك في النظام.</div>
+  </div>
 </div>
 
 <div id="gps-alert-bar">
-    <span>📡 النظام جاهز</span>
+  جاهز…
 </div>
 
+<audio id="alarm" src="/gps_alert.mp3" preload="auto"></audio>
+
 <script>
-    async function processRequest(query) {
-        const formData = new FormData();
-        if (query) formData.append('query', query);
-        formData.append('use_voice', 'false');
+/* ===== Mode switch ===== */
+function switchMode(mode){
+  const v=document.getElementById("voice-section");
+  const t=document.getElementById("text-section");
+  voiceBtn.classList.toggle("active",mode==="voice");
+  textBtn.classList.toggle("active",mode==="text");
+  v.style.display=mode==="voice"?"flex":"none";
+  t.style.display=mode==="text"?"block":"none";
+}
 
-        const resp = await fetch('/llm/voice-interaction', { method: 'POST', body: formData });
-        const data = await resp.json();
+/* ===== Map ===== */
+const map=L.map("map").setView([24.7136,46.6753],9);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-        if (data.status === 'success' && data.map_path) {
-            const mapContainer = document.getElementById("map-container");
-            const mapFrame = document.getElementById("map-frame");
-            mapContainer.style.display = "block";
-            mapFrame.src = data.map_path;
-        }
-    }
+const zones=L.geoJSON(null,{style:{color:"#38bdf8",weight:2,fillOpacity:.12}}).addTo(map);
+const points=L.geoJSON(null,{
+  pointToLayer:(f,ll)=>L.circleMarker(ll,{
+    radius:6,
+    color:f.properties.inside_geofence?"#22c55e":"#ef4444",
+    fillColor:f.properties.inside_geofence?"#22c55e":"#ef4444",
+    fillOpacity:1
+  })
+}).addTo(map);
 
-    // 🔥 استدعاء تلقائي عند فتح الصفحة لرسم الخريطة
-    window.onload = async function() {
-        await processRequest("ارسم الخريطة");
-    };
+async function loadMap(){
+  const r=await fetch("/llm/map-data");
+  const d=await r.json();
+  zones.clearLayers();
+  points.clearLayers();
+  zones.addData(d.zones);
+  points.addData(d.points);
+}
+loadMap();
+setInterval(loadMap,5000);
+
+/* User location */
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(p=>{
+    L.circleMarker([p.coords.latitude,p.coords.longitude],{
+      radius:8,color:"#0ea5e9",fillColor:"#0ea5e9",fillOpacity:1
+    }).addTo(map);
+  });
+}
+
+/* ===== Add point (FIXED) ===== */
+async function addPoint(){
+
+  const latInput = document.getElementById("lat");
+  const lngInput = document.getElementById("lng");
+
+  const lat = parseFloat(latInput.value);
+  const lng = parseFloat(lngInput.value);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    alert("إحداثيات غير صحيحة");
+    return;
+  }
+
+  const response = await fetch("/llm/add-point",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ lat, lng })
+  });
+
+  const d = await response.json();
+
+  const bar = document.getElementById("gps-alert-bar");
+  const alarm = document.getElementById("alarm");
+
+  if (d.inside === true) {
+    bar.style.background = "#166534";
+    bar.innerText = "🟢 داخل نطاق المحمية";
+    alarm.pause();
+    alarm.currentTime = 0;
+  } else {
+    bar.style.background = "#7f1d1d";
+    bar.innerText = "🔴 خارج النطاق المحمية";
+    alarm.currentTime = 0;
+    alarm.play();
+  }
+
+  latInput.value="";
+  lngInput.value="";
+  loadMap();
+}
 </script>
 
 </body>
