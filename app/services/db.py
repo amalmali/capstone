@@ -27,14 +27,14 @@ class Database:
             )
 
     # =========================
-    # فحص هل النقطة داخل محمية (True / False)
+    # هل النقطة داخل أي محمية؟
     # =========================
     def is_inside_protected_zone(self, lat, lon):
         query = """
         SELECT EXISTS (
             SELECT 1
             FROM protected_zones
-            WHERE ST_Contains(
+            WHERE ST_Intersects(
                 geom,
                 ST_SetSRID(ST_MakePoint(%s, %s), 4326)
             )
@@ -45,25 +45,7 @@ class Database:
             return cur.fetchone()[0]
 
     # =========================
-    # جلب اسم المحمية ومستوى الحماية (اختياري)
-    # =========================
-    def get_intersecting_zone_info(self, lat, lon):
-        query = """
-            SELECT name, protection_level
-            FROM protected_zones
-            WHERE ST_Intersects(
-                geom,
-                ST_SetSRID(ST_MakePoint(%s, %s), 4326)
-            )
-            LIMIT 1;
-        """
-        with self.conn.cursor() as cur:
-            cur.execute(query, (lon, lat))
-            result = cur.fetchone()
-            return result if result else (None, None)
-
-    # =========================
-    # GeoJSON للمحميات (Polygon)
+    # GeoJSON للمحميات (البوليقان)
     # =========================
     def get_zones_geojson(self):
         query = """
@@ -88,7 +70,7 @@ class Database:
             return cur.fetchone()[0]
 
     # =========================
-    # GeoJSON لنقاط التتبع (Point)
+    # GeoJSON للنقاط (مع أعلى مستوى حماية)
     # =========================
     def get_points_geojson(self, limit=500):
         query = """
@@ -97,12 +79,14 @@ class Database:
             'features', COALESCE(jsonb_agg(
                 jsonb_build_object(
                     'type','Feature',
-                    'geometry', ST_AsGeoJSON(geom)::jsonb,
+                    'geometry', ST_AsGeoJSON(t.geom)::jsonb,
                     'properties', jsonb_build_object(
-                        'id', id,
-                        'inside_geofence', inside_geofence,
-                        'officer_id', officer_id,
-                        'timestamp', timestamp
+                        'id', t.id,
+                        'inside_geofence', t.inside_geofence,
+                        'officer_id', t.officer_id,
+                        'timestamp', t.timestamp,
+                        'zone_name', z.name,
+                        'protection_level', z.protection_level
                     )
                 )
             ), '[]'::jsonb)
@@ -112,7 +96,20 @@ class Database:
             FROM officer_tracking
             ORDER BY timestamp DESC
             LIMIT %s
-        ) t;
+        ) t
+        LEFT JOIN LATERAL (
+            SELECT name, protection_level
+            FROM protected_zones
+            WHERE ST_Intersects(protected_zones.geom, t.geom)
+            ORDER BY
+                CASE protection_level
+                    WHEN 'high' THEN 1
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                    ELSE 4
+                END
+            LIMIT 1
+        ) z ON TRUE;
         """
         with self.conn.cursor() as cur:
             cur.execute(query, (limit,))

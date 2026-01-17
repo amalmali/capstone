@@ -19,21 +19,24 @@
   --text-main:#f8fafc;
   --text-dim:#94a3b8;
 }
+
 body{
   margin:0;
   background:var(--primary-bg);
   color:var(--text-main);
   font-family:'Segoe UI',Tahoma;
   padding:20px;
+  padding-bottom:90px;
 }
-.header{text-align:center;margin-bottom:24px}
+
+.header{text-align:center;margin-bottom:20px}
 .header h1{margin:0;color:var(--accent-blue)}
-.header p{color:var(--text-dim);margin-top:6px}
+.header p{color:var(--text-dim)}
 
 .mode-selector{
   display:flex;justify-content:center;gap:10px;
   background:var(--card-bg);padding:8px;
-  border-radius:40px;max-width:320px;margin:0 auto 30px;
+  border-radius:40px;max-width:320px;margin:0 auto 20px;
 }
 .mode-btn{
   border:none;padding:10px 22px;border-radius:30px;
@@ -45,7 +48,7 @@ body{
 .main-layout{
   display:grid;
   grid-template-columns:1fr 1.3fr;
-  gap:24px;
+  gap:20px;
   max-width:1200px;
   margin:auto;
 }
@@ -58,11 +61,12 @@ body{
   position:relative;
 }
 
+/* Interaction */
 #voice-section{
   display:flex;
   justify-content:center;
   align-items:center;
-  min-height:220px;
+  min-height:200px;
 }
 .circle-btn{
   width:160px;height:160px;border-radius:50%;
@@ -82,38 +86,47 @@ body{
 }
 
 /* Map */
-#map{height:500px;border-radius:16px}
+#map{height:480px;border-radius:16px}
+
 .map-input{
-  position:absolute;top:14px;left:14px;
+  position:absolute;top:12px;left:12px;
   background:#020617cc;padding:8px;
-  border-radius:10px;z-index:999;
+  border-radius:10px;z-index:1000;
 }
-.map-input input{width:80px}
+.map-input input{
+  width:80px;
+  margin-bottom:4px;
+}
 .map-input button{
+  width:100%;
   background:var(--accent-blue);
   border:none;border-radius:8px;
-  color:#fff;padding:6px 10px;
+  color:#fff;padding:6px;
   cursor:pointer;
 }
 
-.legend{margin-top:10px;color:var(--text-dim);font-size:.85rem}
+.legend{margin-top:8px;color:var(--text-dim);font-size:.85rem}
 
-/* Results */
-.results{max-width:1200px;margin:30px auto 100px}
+/* Chat */
+.results{max-width:1200px;margin:20px auto}
 .chat-card{
   background:var(--card-bg);
   border-radius:16px;
-  padding:18px;
+  padding:16px;
   border-right:5px solid var(--accent-blue);
 }
 
-/* Bottom alert */
+/* Bottom Alert */
 #gps-alert-bar{
-  position:fixed;bottom:0;left:0;
-  width:100%;padding:14px;
+  position:fixed;
+  bottom:0;left:0;
+  width:100%;
+  height:60px;
+  line-height:60px;
   text-align:center;
   background:#334155;
   font-weight:bold;
+  z-index:9999;
 }
 </style>
 </head>
@@ -122,12 +135,12 @@ body{
 
 <div class="header">
   <h1>Geospatial Assistance System</h1>
-  <p>اضغط على الميكروفون أو استخدم الخريطة</p>
+  <p>اضغط على الميكروفون أو أضف نقطة على الخريطة</p>
 </div>
 
 <div class="mode-selector">
-  <button class="mode-btn active" id="voiceBtn" onclick="switchMode('voice')">🎤 التحدث</button>
-  <button class="mode-btn" id="textBtn" onclick="switchMode('text')">⌨️ الكتابة</button>
+  <button class="mode-btn active" id="voiceBtn">🎤 التحدث</button>
+  <button class="mode-btn" id="textBtn">⌨️ الكتابة</button>
 </div>
 
 <div class="main-layout">
@@ -137,7 +150,7 @@ body{
     <h3>اسألني</h3>
 
     <div id="voice-section">
-      <button class="circle-btn">🎤<br>تحدث الآن</button>
+      <button class="circle-btn" id="micBtn">🎤<br>تحدث الآن</button>
     </div>
 
     <div id="text-section">
@@ -151,15 +164,14 @@ body{
     <h3>الخريطة</h3>
 
     <div class="map-input">
-      <input id="lat" placeholder="Lat">
       <input id="lng" placeholder="Lng">
-      <button onclick="addPoint()">إضافة</button>
+      <input id="lat" placeholder="Lat">
+      <button id="addPointBtn">إضافة</button>
     </div>
 
     <div id="map"></div>
 
     <div class="legend">
-      🔵 موقعك الحالي<br>
       🟢 داخل المحمية — 🔴 خارج المحمية
     </div>
   </div>
@@ -171,98 +183,98 @@ body{
   </div>
 </div>
 
-<div id="gps-alert-bar">
-  جاهز…
-</div>
-
+<div id="gps-alert-bar">جاهز…</div>
 <audio id="alarm" src="/gps_alert.mp3" preload="auto"></audio>
 
 <script>
-/* ===== Mode switch ===== */
+/* ===== MODE SWITCH ===== */
+const voiceBtn = document.getElementById("voiceBtn");
+const textBtn  = document.getElementById("textBtn");
+const voiceSec = document.getElementById("voice-section");
+const textSec  = document.getElementById("text-section");
+
+voiceBtn.onclick = ()=>switchMode("voice");
+textBtn.onclick  = ()=>switchMode("text");
+
 function switchMode(mode){
-  const v=document.getElementById("voice-section");
-  const t=document.getElementById("text-section");
   voiceBtn.classList.toggle("active",mode==="voice");
   textBtn.classList.toggle("active",mode==="text");
-  v.style.display=mode==="voice"?"flex":"none";
-  t.style.display=mode==="text"?"block":"none";
+  voiceSec.style.display = mode==="voice"?"flex":"none";
+  textSec.style.display  = mode==="text"?"block":"none";
 }
 
-/* ===== Map ===== */
-const map=L.map("map").setView([24.7136,46.6753],9);
+/* ===== MAP ===== */
+const map = L.map("map").setView([25.13,46.57],9);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-const zones=L.geoJSON(null,{style:{color:"#38bdf8",weight:2,fillOpacity:.12}}).addTo(map);
-const points=L.geoJSON(null,{
-  pointToLayer:(f,ll)=>L.circleMarker(ll,{
-    radius:6,
-    color:f.properties.inside_geofence?"#22c55e":"#ef4444",
-    fillColor:f.properties.inside_geofence?"#22c55e":"#ef4444",
-    fillOpacity:1
-  })
+const zones = L.geoJSON(null).addTo(map);
+
+const points = L.geoJSON(null,{
+  pointToLayer:(f,ll)=>{
+    const v = f.properties?.visual || {};
+    return L.circleMarker(ll,{
+      radius: v.radius || 6,
+      color: v.color || "#ef4444",
+      fillColor: v.color || "#ef4444",
+      fillOpacity:1
+    }).bindPopup(v.popup || "");
+  }
 }).addTo(map);
 
 async function loadMap(){
-  const r=await fetch("/llm/map-data");
-  const d=await r.json();
+  const r = await fetch("/llm/map-data");
+  const d = await r.json();
   zones.clearLayers();
   points.clearLayers();
   zones.addData(d.zones);
   points.addData(d.points);
 }
+
 loadMap();
-setInterval(loadMap,5000);
+setInterval(loadMap,3000);
 
-/* User location */
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(p=>{
-    L.circleMarker([p.coords.latitude,p.coords.longitude],{
-      radius:8,color:"#0ea5e9",fillColor:"#0ea5e9",fillOpacity:1
-    }).addTo(map);
-  });
-}
+/* ===== ADD POINT ===== */
+document.getElementById("addPointBtn").addEventListener("click", async ()=>{
+  const lat = parseFloat(document.getElementById("lat").value);
+  const lng = parseFloat(document.getElementById("lng").value);
 
-/* ===== Add point (FIXED) ===== */
-async function addPoint(){
-
-  const latInput = document.getElementById("lat");
-  const lngInput = document.getElementById("lng");
-
-  const lat = parseFloat(latInput.value);
-  const lng = parseFloat(lngInput.value);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)){
     alert("إحداثيات غير صحيحة");
     return;
   }
 
-  const response = await fetch("/llm/add-point",{
+  const r = await fetch("/llm/add-point",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ lat, lng })
+    body:JSON.stringify({lat,lng})
   });
 
-  const d = await response.json();
-
+  const d = await r.json();
   const bar = document.getElementById("gps-alert-bar");
-  const alarm = document.getElementById("alarm");
 
-  if (d.inside === true) {
-    bar.style.background = "#166534";
-    bar.innerText = "🟢 داخل نطاق المحمية";
-    alarm.pause();
-    alarm.currentTime = 0;
-  } else {
-    bar.style.background = "#7f1d1d";
-    bar.innerText = "🔴 خارج النطاق المحمية";
-    alarm.currentTime = 0;
-    alarm.play();
+  if(d.inside){
+    bar.style.background="#166534";
+    bar.innerText =
+      `🟢 داخل ${d.zone_name} — مستوى الحماية: ${(d.protection_level||"").toUpperCase()}`;
+  }else{
+    bar.style.background="#7f1d1d";
+    bar.innerText="🔴 خارج نطاق المحمية";
+    document.getElementById("alarm").play();
   }
 
-  latInput.value="";
-  lngInput.value="";
   loadMap();
-}
+});
+
+/* ===== CHAT EVENTS ===== */
+document.getElementById("send-text-btn").onclick = ()=>{
+  const text = document.getElementById("text-input").value.trim();
+  if(!text) return;
+  document.getElementById("bot-p").innerText="🤖 تم استلام سؤالك…";
+};
+
+document.getElementById("micBtn").onclick = ()=>{
+  document.getElementById("bot-p").innerText="🎙️ جاري الاستماع...";
+};
 </script>
 
 </body>
