@@ -1,6 +1,7 @@
 # services/db.py
 import psycopg2
 from datetime import datetime
+import json
 
 class Database:
     def __init__(self, db_config):
@@ -114,6 +115,35 @@ class Database:
         with self.conn.cursor() as cur:
             cur.execute(query, (limit,))
             return cur.fetchone()[0]
+    
+    def save_violation_report(
+        self,
+        report: dict,
+        inside_geofence: bool,
+        zone_name: str | None,
+        protection_level: str | None
+):
+        query = """
+            INSERT INTO violation_reports
+            (violation_type, violation_severity, people_count, detected_objects, confidence, raw_report,
+            zone_name, protection_level, inside_geofence)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(
+                query,
+                (
+                    report.get("violation_type"),
+                    report.get("violation_severity"),
+                    report.get("people_count"),
+                    json.dumps(report.get("detected_objects", [])),
+                    report.get("confidence"),
+                    json.dumps(report),  # raw json
+                    zone_name,
+                    protection_level,
+                    inside_geofence
+                )
+            )
 
     def close(self):
         self.conn.close()

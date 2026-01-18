@@ -7,12 +7,18 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 VECTORSTORE_DIR = BASE_DIR / "vectorstores"
+
+
 MODELS_DIR = BASE_DIR / "models"
 
 # إنشاء المجلدات إذا لم تكن موجودة
 DATA_DIR.mkdir(exist_ok=True)
 VECTORSTORE_DIR.mkdir(exist_ok=True)
 MODELS_DIR.mkdir(exist_ok=True)
+
+# مسار حفظ Chunks النصية (للتدقيق و Agentic RAG)
+CHUNKS_DIR = VECTORSTORE_DIR / "chunks"
+CHUNKS_DIR.mkdir(exist_ok=True)
 
 # 2. إعدادات نظام GPS
 SERIAL_PORT = "/dev/serial0"

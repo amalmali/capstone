@@ -220,12 +220,20 @@ input::placeholder{color:#7c8aa5}
     <!-- Text -->
     <div id="text-section">
       <input id="text-input" placeholder="اكتبي سؤالك هنا..." />
+
+      <!-- ===== VLM Image Upload (تحت صندوق الكتابة) ===== -->
       <div class="row">
-        <button class="btn" id="send-text-btn" type="button">إرسال</button>
-        <button class="btn secondary" id="enable-tts-btn" type="button" title="تفعيل الصوت بالمتصفح">🔊 تفعيل الصوت</button>
-        <button class="btn secondary" id="stop-tts-btn" type="button">⏹️ إيقاف الصوت</button>
+        <input type="file" id="image-input" accept="image/*">
+        <button class="btn amber" id="upload-image-btn" type="button">📷 تحليل الصورة</button>
       </div>
+
+    <div class="row">
+      <button class="btn" id="send-text-btn" type="button">إرسال</button>
+      <button class="btn secondary" id="enable-tts-btn" type="button">🔊 تفعيل الصوت</button>
+      <button class="btn secondary" id="stop-tts-btn" type="button">⏹️ إيقاف الصوت</button>
     </div>
+</div>
+
 
     <hr />
 
@@ -520,6 +528,48 @@ micBtn.addEventListener("click", async ()=>{
     micBtn.disabled = false;
   }
 });
+
+/* ================= VLM Image Upload ================= */
+const uploadImageBtn = $("upload-image-btn");
+const imageInput = $("image-input");
+
+uploadImageBtn?.addEventListener("click", async ()=>{
+  const file = imageInput.files[0];
+  if(!file){
+    alert("اختاري صورة أولاً");
+    return;
+  }
+
+  setBot("🧠 جاري تحليل الصورة…");
+  setStatus("");
+
+  try{
+    const fd = new FormData();
+    fd.append("image", file);
+
+    // عدلي الرابط حسب سيرفر الـ VLM عندك
+    const r = await fetch("http://127.0.0.1:9000/analyze", {
+      method: "POST",
+      body: fd
+    });
+
+    if(!r.ok) throw new Error(`VLM HTTP ${r.status}`);
+    const d = await r.json();
+
+    const resultText = d.result || JSON.stringify(d, null, 2);
+    setBot(resultText);
+
+    // نطق النتيجة صوتيًا
+    speak(resultText);
+
+  }catch(err){
+    console.error(err);
+    setBot("❌ فشل تحليل الصورة.");
+    setStatus("تأكدي أن سيرفر VLM شغال.");
+  }
+});
+
+
 </script>
 
 </body>

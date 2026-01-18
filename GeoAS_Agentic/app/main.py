@@ -12,6 +12,7 @@ from services.retriever_service import register_pdf
 from services.db import Database
 from config import BASE_DIR, DATA_DIR, DB_CONFIG
 
+
 STATIC_DIR = BASE_DIR / "static"
 
 # ======================================================
