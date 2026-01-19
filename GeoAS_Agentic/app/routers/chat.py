@@ -9,6 +9,10 @@ from services.rag_service import answer
 from services.retriever_service import retrievers
 from services.db import Database
 
+from fastapi import UploadFile, File
+import httpx 
+import json
+
 router = APIRouter(prefix="/llm")
 templates = Jinja2Templates(directory="templates")
 
@@ -250,3 +254,72 @@ async def voice_interaction(
         "response": response_text,
         "source": source_used
     }
+
+# ======================================================
+# تحليل صورة عبر VLM وحفظ المخالفات
+
+VLM_API_URL = "http://127.0.0.1:9000/vlm/analyze"
+
+@router.post("/analyze-image")
+async def analyze_image(request: Request, file: UploadFile = File(...)):
+    db: Database = request.app.state.db_gps
+
+    # 1) قراءة الصورة
+    img = await file.read()
+
+    # 2) إرسالها لـ VLM
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            VLM_API_URL,
+            files={
+                "file": (file.filename, img, file.content_type or "image/jpeg")
+            }
+        )
+
+    if resp.status_code != 200:
+        return {"status": "error", "details": resp.text}
+
+    # 3) قراءة نتيجة VLM (قد تكون dict أو string)
+    raw_report = resp.json()
+
+    if isinstance(raw_report, str):
+        try:
+            report = json.loads(raw_report)
+        except json.JSONDecodeError:
+            # لو رجع نص فقط
+            report = {
+                "violation_type": raw_report,
+                "violation_severity": None,
+                "people_count": None,
+                "detected_objects": [],
+                "confidence": None
+            }
+    elif isinstance(raw_report, dict):
+        report = raw_report
+    else:
+        report = {
+            "violation_type": "Unknown",
+            "violation_severity": None,
+            "people_count": None,
+            "detected_objects": [],
+            "confidence": None
+        }
+
+    # 4) استخراج القيم بأمان
+    violation_type = report.get("violation_type", "Unknown")
+    violation_severity = report.get("violation_severity")
+    people_count = report.get("people_count")
+    detected_objects = report.get("detected_objects") or []
+    confidence = report.get("confidence")
+
+    # 5) حفظ في جدول violations
+    db.save_violation(
+        violation_type=violation_type,
+        violation_severity=violation_severity,
+        people_count=people_count,
+        detected_objects=detected_objects,
+        confidence=confidence
+    )
+
+    # 6) رجوع نجاح فقط (بدون عرض التقرير)
+    return {"status": "success"}

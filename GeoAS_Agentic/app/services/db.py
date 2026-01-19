@@ -145,5 +145,27 @@ class Database:
                 )
             )
 
+    # =========================
+    # حفظ نتيجة VLM في جدول violations
+    # =========================
+    def save_violation(
+        self,
+        violation_type: str,
+        violation_severity: str | None,
+        people_count: int | None,
+        detected_objects: list[str] | None,
+        confidence: float | None
+    ):
+        query = """
+            INSERT INTO violations
+            (violation_type, violation_severity, people_count, detected_objects, confidence)
+            VALUES (%s, %s, %s, %s, %s);
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(
+                query,
+                (violation_type, violation_severity, people_count, detected_objects, confidence)
+        )
+
     def close(self):
         self.conn.close()

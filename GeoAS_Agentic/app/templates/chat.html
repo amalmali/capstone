@@ -545,10 +545,10 @@ uploadImageBtn?.addEventListener("click", async ()=>{
 
   try{
     const fd = new FormData();
-    fd.append("image", file);
+    fd.append("file", file);
 
     // عدلي الرابط حسب سيرفر الـ VLM عندك
-    const r = await fetch("http://127.0.0.1:9000/analyze", {
+    const r = await fetch("/llm/analyze-image", {
       method: "POST",
       body: fd
     });
