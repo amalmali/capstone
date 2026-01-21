@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الوكيل البيئي الذكي - نظام الدردشة المتكامل</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root { 
+            --bg-main: #F1F3E0;      
+            --panel-bg: #D2DCB6;     
+            --accent-mid: #A1BC98;   
+            --primary-dark: #778873; 
+            --accent-orange: #E67E51; 
+            --white: #ffffff;
+        }
+
+        body { 
+            margin: 0; 
+            background: var(--bg-main); 
+            color: var(--primary-dark); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 20px; 
+        }
+        
+        .main-container { 
+            display: grid; 
+            grid-template-columns: 1fr 400px; 
+            gap: 20px; 
+            max-width: 1400px; 
+            margin: auto; 
+        }
+        
+        #map { 
+            height: 550px; 
+            width: 100%; 
+            border-radius: 20px; 
+            border: 2px solid var(--accent-mid);
+            box-shadow: 0 10px 25px rgba(119, 136, 115, 0.1);
+        }
+
+        .chat-section {
+            background: var(--panel-bg); 
+            padding: 15px; 
+            border-radius: 20px;
+            display: flex; 
+            flex-direction: column; 
+            height: 650px;
+            border: 1px solid var(--accent-mid);
+        }
+
+        .response-box {
+            flex-grow: 1; 
+            background: var(--bg-main); 
+            border-radius: 12px;
+            padding: 15px; 
+            overflow-y: auto; 
+            margin-bottom: 10px;
+            border: 1px solid var(--accent-mid);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bubble { margin-bottom: 12px; padding: 12px; border-radius: 15px; max-width: 85%; line-height: 1.5; position: relative; }
+        .user-bubble { background: var(--accent-mid); align-self: flex-start; border-bottom-right-radius: 2px; }
+        .ai-bubble { background: var(--white); align-self: flex-end; border-bottom-left-radius: 2px; border: 1px solid var(--accent-mid); }
+
+        .text-input-area {
+            display: flex;
+            gap: 8px;
+            background: var(--white);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--accent-mid);
+            flex: 1;
+        }
+
+        .text-input-area input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 5px;
+            font-size: 14px;
+            background: transparent;
+        }
+
+        .input-container {
+            background: var(--white); 
+            padding: 10px; 
+            border-radius: 15px;
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 15px; 
+            border: 1px solid var(--accent-mid);
+            align-items: center;
+        }
+
+        .input-container input { padding: 8px; border-radius: 8px; border: 1px solid var(--accent-mid); width: 120px; text-align: center; }
+        
+        button { 
+            background: var(--primary-dark); color: var(--white); border: none; 
+            padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold;
+        }
+        
+        button:hover { background: var(--accent-orange); transform: translateY(-1px); }
+
+        .mic-btn { 
+            background: var(--primary-dark); border-radius: 50%; width: 50px; height: 50px; 
+            display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--white); cursor: pointer; color: white; flex-shrink: 0;
+        }
+        
+        .mic-btn.recording { animation: pulse 1.5s infinite; background: var(--accent-orange); }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        #status-bar { padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px; background: var(--panel-bg); border: 1px solid var(--accent-mid); min-height: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align: center;"> نظام الوكيل الجيومكاني الذكي</h2>
+
+    <div class="main-container">
+        <div>
+            <div class="input-container">
+                <input type="number" id="lat-input" step="any" placeholder="خط العرض">
+                <input type="number" id="lon-input" step="any" placeholder="خط الطول">
+                <button onclick="checkLocation()">تحديد الموقع</button>
+            </div>
+            <div id="map"></div>
+            <div id="status-bar">انقر على الخريطة أو أدخل الإحداثيات للاستكشاف</div>
+        </div>
+
+        <div class="chat-section">
+            <h3 style="margin: 0 0 10px 0;">المساعد الجيومكاني الذكي </h3>
+            <div class="response-box" id="ai-response">
+                <div class="bubble ai-bubble">مرحباً بك! يمكنك سؤالي كتابةً أو عبر الميكروفون عن القوانين البيئية والإحصائيات.</div>
+            </div>
+
+            <div id="record-status" style="text-align: center; font-size: 12px; margin-bottom: 5px; font-weight: bold; color: var(--accent-orange);"></div>
+
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="text-input-area">
+                    <input type="text" id="user-text-input" placeholder="اكتب سؤالك هنا..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendTextMessage()">إرسال</button>
+                </div>
+                <button id="start-record" class="mic-btn">🎤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. تهيئة الخريطة
+        var map = L.map('map').setView([24.7136, 46.6753], 6);
+        var currentMarker = null;
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // 2. تحميل المحميات
+        async function loadProtectedAreas() {
+            try {
+                const resp = await fetch('/llm/map-data');
+                const data = await resp.json();
+                L.geoJSON(data.areas, {
+                    style: { color: '#778873', fillColor: '#A1BC98', fillOpacity: 0.4, weight: 1.5 },
+                    onEachFeature: (feature, layer) => {
+                        layer.bindTooltip(feature.properties.name);
+                        layer.on('click', (e) => {
+                            document.getElementById('lat-input').value = e.latlng.lat.toFixed(6);
+                            document.getElementById('lon-input').value = e.latlng.lng.toFixed(6);
+                            processLocation(e.latlng.lat, e.latlng.lng);
+                        });
+                    }
+                }).addTo(map);
+            } catch (e) { console.error("Error loading map data:", e); }
+        }
+        loadProtectedAreas();
+
+        // 3. دالة الزر "تحديد الموقع"
+        async function checkLocation() {
+            const lat = document.getElementById('lat-input').value;
+            const lon = document.getElementById('lon-input').value;
+            if (!lat || !lon) {
+                alert("الرجاء إدخال خطوط العرض والطول أولاً");
+                return;
+            }
+            processLocation(parseFloat(lat), parseFloat(lon));
+        }
+
+        async function processLocation(lat, lon) {
+            const formData = new FormData();
+            formData.append('lat', lat); 
+            formData.append('lon', lon);
+            
+            try {
+                const resp = await fetch('/llm/check-manual-location', { method: 'POST', body: formData });
+                const data = await resp.json();
+                
+                const statusBar = document.getElementById('status-bar');
+                statusBar.innerText = data.message;
+                statusBar.style.color = data.is_inside ? "#15803d" : "#b91c1c";
+                
+                map.flyTo([lat, lon], 12);
+                
+                if (currentMarker) map.removeLayer(currentMarker);
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>${data.region || "موقع محدد"}</b><br>${data.message}`)
+                    .openPopup();
+            } catch (e) { 
+                console.error("Error checking location:", e);
+                document.getElementById('status-bar').innerText = "خطأ في الاتصال بالخادم";
+            }
+        }
+
+        // 4. نظام الدردشة
+        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+
+        async function sendTextMessage() {
+            const input = document.getElementById('user-text-input');
+            const query = input.value.trim(); // تم إصلاح الخطأ هنا
+            
+            if (!query) return;
+
+            addBubble(query, 'user');
+            input.value = '';
+            
+            await callAiApi(query);
+        }
+
+        function addBubble(text, sender) {
+            const box = document.getElementById('ai-response');
+            const div = document.createElement('div');
+            div.className = `bubble ${sender}-bubble`;
+            div.innerText = (sender === 'user' ? '👤 أنت: ' : '🤖 الوكيل: ') + text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function callAiApi(query) {
+            const status = document.getElementById('record-status');
+            status.innerText = "جاري التفكير...";
+            
+            const formData = new FormData();
+            formData.append('query', query);
+            
+            try {
+                const resp = await fetch('/llm/voice-interaction', { method: 'POST', body: formData });
+                const data = await resp.json();
+                addBubble(data.response, 'ai');
+                status.innerText = "";
+            } catch (e) { 
+                status.innerText = "خطأ في الاتصال"; 
+                addBubble("عذراً، واجهت مشكلة في الاتصال بالسيرفر.", 'ai');
+            }
+        }
+
+        // 5. نظام التعرف على الصوت
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'ar-SA';
+            
+            document.getElementById('start-record').onclick = () => {
+                recognition.start();
+                document.getElementById('start-record').classList.add('recording');
+                document.getElementById('record-status').innerText = "جاري الاستماع...";
+            };
+
+            recognition.onresult = (event) => {
+                const query = event.results[0][0].transcript;
+                document.getElementById('start-record').classList.remove('recording');
+                addBubble(query, 'user');
+                callAiApi(query);
+            };
+
+            recognition.onerror = () => {
+                document.getElementById('start-record').classList.remove('recording');
+                document.getElementById('record-status').innerText = "تعذر سماع الصوت، حاول ثانية.";
+            };
+        }
+    </script>
+</body>
+</html>
