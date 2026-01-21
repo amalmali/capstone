@@ -1,0 +1,150 @@
+/* MainPortal.css - الإصدار الموحد بالألوان الطبيعية */
+
+:root {
+  --side-bg: #778873;       /* الأخضر الداكن للقائمة الجانبية */
+  --side-hover: #A1BC98;    /* الأخضر المتوسط عند التمرير */
+  --accent-light: #D2DCB6;  /* الأخضر الفاتح للتمييز */
+  --bg-main: #F1F3E0;       /* الأبيض الكريمي للخلفية العامة */
+  --text-light: #F1F3E0;    /* نصوص القائمة الجانبية */
+  --text-dark: #778873;     /* نصوص المحتوى الأساسية */
+}
+
+.portal-container {
+  display: flex;
+  height: 100vh;
+  
+  overflow: hidden; 
+  direction: rtl;
+  background-color: var(--bg-main);
+}
+
+
+.sidebar {
+  width: 280px;
+  background-color: var(--side-bg);
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 15px rgba(119, 136, 115, 0.2);
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 30px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--side-hover);
+}
+
+.logo-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.nav-links {
+  list-style: none;
+  padding: 20px 0;
+  flex-grow: 1;
+}
+
+.nav-links li {
+  padding: 15px 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: var(--text-light);
+}
+
+.nav-links li .icon {
+  margin-left: 15px;
+  font-size: 20px;
+}
+
+.nav-links li:hover {
+  background-color: var(--side-hover);
+  padding-right: 30px; 
+}
+
+.nav-links li.active {
+  background-color: var(--A1BC98); 
+  font-weight: bold;
+  border-right: 5px solid var(--accent-light);
+}
+
+
+.content-area {
+  flex-grow: 1;
+  background-color: var(--bg-main);
+  position: relative;
+  
+  overflow-y: auto !important; 
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.embedded-component {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+
+.project-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid var(--side-hover);
+  text-align: center;
+}
+
+.logout-button-sidebar {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--side-hover);
+  color: var(--side-bg); 
+  border: none;
+  border-radius: 8px;
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 10px;
+}
+
+.logout-button-sidebar:hover {
+  background-color: var(--accent-light);
+  transform: translateY(-2px);
+}
+
+.version-text {
+  font-size: 11px;
+  color: var(--accent-light);
+  opacity: 0.8;
+}
+
+
+.content-area::-webkit-scrollbar {
+  width: 10px;
+}
+
+.content-area::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+.content-area::-webkit-scrollbar-thumb {
+  background: var(--side-hover);
+  border-radius: 10px;
+  border: 2px solid var(--bg-main);
+}
+
+.content-area::-webkit-scrollbar-thumb:hover {
+  background: var(--side-bg);
+}
