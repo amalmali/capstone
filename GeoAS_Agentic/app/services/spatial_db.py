@@ -9,11 +9,11 @@ from psycopg2.extras import RealDictCursor
 
 # بيانات الاتصال
 DB_CONFIG = {
-    "dbname": "GeoAS",
-    "user": "postgres",
-    "password": "L10055",
-    "host": "localhost",
-    "port": 5433
+    "host": "localhost", #hostname
+    "port": , #port number         
+    "dbname": "", # database name    
+    "user": "", #username 
+    "password": "" #password
 }
 
 
