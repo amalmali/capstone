@@ -35,11 +35,11 @@ ALERT_SOUND = str(BASE_DIR / "app/gps_alert.mp3")
 
 # 3. إعدادات قاعدة البيانات
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5433,          
-    "dbname": "GeoAS",    
-    "user": "postgres",
-    "password": "L10055"
+    "host": "localhost", #hostname
+    "port": , #port number         
+    "dbname": "", # database name    
+    "user": "", #username 
+    "password": "" #password
 }
 
 # 4. إعدادات الصوت والذكاء الاصطناعي
